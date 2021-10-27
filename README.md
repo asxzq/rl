@@ -1,5 +1,3 @@
-#rl
-
 ### 参考：
 
 [easy-rl/codes at master · datawhalechina/easy-rl (github.com)](https://github.com/datawhalechina/easy-rl/tree/master/codes)
