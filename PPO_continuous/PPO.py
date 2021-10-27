@@ -190,6 +190,7 @@ class PPO:
                 critic_loss = (returns - critic_value) ** 2
                 critic_loss = critic_loss.mean()
                 # 加和反向传播和分开反向传播几乎没区别，SGD是完全没区别
+                # 忽略了第三项loss
                 total_loss = actor_loss + self.c1 * critic_loss
 
                 self.loss = total_loss

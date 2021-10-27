@@ -1,3 +1,9 @@
+### 使用：
+
+下载后，直接运行每个子文件夹的main.py即可
+
+训练参数通常在生成rl-agent的文件中。
+
 ### 参考：
 
 [easy-rl/codes at master · datawhalechina/easy-rl (github.com)](https://github.com/datawhalechina/easy-rl/tree/master/codes)
