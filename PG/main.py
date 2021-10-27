@@ -1,4 +1,3 @@
-import numpy as np
 import gym
 from PG import PG
 #设定参数

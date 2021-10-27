@@ -29,7 +29,6 @@ class Qlearning(object):
         return action
 
     def predict_action(self,state):
-        #不使用策略
         action = np.argmax(self.Q_table[str(state)])
         return action
 

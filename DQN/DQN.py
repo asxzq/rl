@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
 # DQN本质上只用了一个网络
 # 为了解决q_target计算不稳定问题，引入另外的target_net，得到NatureDQN
 # 此代码实际为 NatureDQN
