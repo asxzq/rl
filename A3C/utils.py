@@ -37,13 +37,16 @@ def push_and_pull(opt, lnet, gnet, done, s_, bs, ba, br, gamma):
         v_wrap(np.array(buffer_v_target)[:, None]))
 
     # calculate local gradients and push local parameters to global
+    # 把本地参数传上去
     opt.zero_grad()
     loss.backward()
     for lp, gp in zip(lnet.parameters(), gnet.parameters()):
         gp._grad = lp.grad
+    # 更新主网络网络参数
     opt.step()
 
     # pull global parameters
+    # 把主网络参数同步下来
     lnet.load_state_dict(gnet.state_dict())
 
 
@@ -59,5 +62,5 @@ def record(global_ep, global_ep_r, ep_r, res_queue, name):
     print(
         name,
         "Ep:", global_ep.value,
-        "| Ep_r: %.0f" % global_ep_r.value,
+        "| Ep_r: %.04f" % global_ep_r.value,
     )
