@@ -53,7 +53,7 @@ class LandMars(object):
         return self.state, reward, done
 
     def render(self):
-        plot(self.state[0],)
+        plot(self.state[0],1)
 
 if __name__ == "__main__":
     a = LandMars()
