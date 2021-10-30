@@ -43,7 +43,7 @@ class Net(nn.Module):
 
     def forward(self, x):
         a1 = F.relu6(self.a1(x))
-        mu = 2 * F.tanh(self.mu(a1))
+        mu = 2 * torch.tanh(self.mu(a1))
         sigma = F.softplus(self.sigma(a1)) + 0.001      # avoid 0
         c1 = F.relu6(self.c1(x))
         values = self.v(c1)
@@ -137,7 +137,35 @@ class Worker(mp.Process):
 
         self.res_queue.put(None)
 
+
+def train():
+    gnet = Net(N_S, N_A)  # global network
+    gnet.share_memory()  # share the global parameters in multiprocessing
+    opt = SharedAdam(gnet.parameters(), lr=1e-4, betas=(0.95, 0.999))  # global optimizer
+    global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
+
+    # parallel training
+    workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(mp.cpu_count())]
+    [w.start() for w in workers]
+    res = []  # record episode reward to plot
+    while True:
+        r = res_queue.get()
+        if r is not None:
+            res.append(r)
+        else:
+            break
+    [w.join() for w in workers]
+
+    import matplotlib.pyplot as plt
+    plt.plot(res)
+    plt.ylabel('Moving average ep reward')
+    plt.xlabel('Step')
+    plt.show()
+
+
 def test():
+    gnet = Net(N_S, N_A)  # global network
+    gnet.load()
     print('开始测试!')
     for i in range(TEST_MAX_EP):
         ep_r = 0  # reward per episode
@@ -158,29 +186,7 @@ def test():
 
 
 if __name__ == "__main__":
-    gnet = Net(N_S, N_A)  # global network
     if ONTRAIN:
-        gnet.share_memory()         # share the global parameters in multiprocessing
-        opt = SharedAdam(gnet.parameters(), lr=1e-4, betas=(0.95, 0.999))  # global optimizer
-        global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
-
-        # parallel training
-        workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(mp.cpu_count())]
-        [w.start() for w in workers]
-        res = []                    # record episode reward to plot
-        while True:
-            r = res_queue.get()
-            if r is not None:
-                res.append(r)
-            else:
-                break
-        [w.join() for w in workers]
-
-        import matplotlib.pyplot as plt
-        plt.plot(res)
-        plt.ylabel('Moving average ep reward')
-        plt.xlabel('Step')
-        plt.show()
+        train()
     else:
-        gnet.load()
         test()

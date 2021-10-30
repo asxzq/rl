@@ -20,7 +20,7 @@ UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
 TRAIN_MAX_EP = 3000
 TEST_MAX_EP = 30
-ONTRAIN = True
+ONTRAIN = False
 
 env = gym.make('CartPole-v0')
 N_S = env.observation_space.shape[0]
@@ -68,7 +68,7 @@ class Net(nn.Module):
         total_loss = (c_loss + a_loss).mean()
         return total_loss
 
-    def save(self, path='net.pth'):
+    def save(self, path='net_discrete.pth'):
         state = {
             'pi1_state_dict': self.pi1.state_dict(),
             'pi2_state_dict': self.pi2.state_dict(),
@@ -77,7 +77,7 @@ class Net(nn.Module):
         }
         torch.save(state, path)
 
-    def load(self, path='net.pth'):
+    def load(self, path='net_discrete.pth'):
         checkpoint = torch.load(path)
         self.pi1.load_state_dict(checkpoint['pi1_state_dict'])
         self.pi2.load_state_dict(checkpoint['pi2_state_dict'])
@@ -146,8 +146,42 @@ class Worker(mp.Process):
 
 
 
+def train():
+    gnet = Net(N_S, N_A)  # global network
+    gnet.share_memory()  # share the global parameters in multiprocessing
+    opt = SharedAdam(gnet.parameters(), lr=1e-4, betas=(0.92, 0.999))  # global optimizer
+    # 进程之间共享的内存
+    global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
+
+    # parallel training
+    # 并行计算
+    print(mp.cpu_count())
+    # 根据CPU数量创建多个进程
+    workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(mp.cpu_count())]
+    # 多个进程启动
+    [w.start() for w in workers]
+    res = []  # record episode reward to plot
+
+    while True:
+        r = res_queue.get()
+        if r is not None:
+            res.append(r)
+        else:
+            break
+
+    # join([timeout])：是用来阻塞当前上下文，直至该进程运行结束，一个进程可以被join()多次
+    [w.join() for w in workers]
+
+    gnet.save()
+    import matplotlib.pyplot as plt
+    plt.plot(res)
+    plt.ylabel('Moving average ep reward')
+    plt.xlabel('Step')
+    plt.show()
 
 def test():
+    gnet = Net(N_S, N_A)  # global network
+    gnet.load()
     print('开始测试!')
     for i in range(TEST_MAX_EP):
         ep_r = 0  # reward per episode
@@ -171,38 +205,7 @@ def test():
 
 
 if __name__ == "__main__":
-    gnet = Net(N_S, N_A)  # global network
     if ONTRAIN:
-        gnet.share_memory()  # share the global parameters in multiprocessing
-        opt = SharedAdam(gnet.parameters(), lr=1e-4, betas=(0.92, 0.999))  # global optimizer
-        # 进程之间共享的内存
-        global_ep, global_ep_r, res_queue = mp.Value('i', 0), mp.Value('d', 0.), mp.Queue()
-
-        # parallel training
-        # 并行计算
-        print(mp.cpu_count())
-        # 根据CPU数量创建多个进程
-        workers = [Worker(gnet, opt, global_ep, global_ep_r, res_queue, i) for i in range(mp.cpu_count())]
-        # 多个进程启动
-        [w.start() for w in workers]
-        res = []  # record episode reward to plot
-
-        while True:
-            r = res_queue.get()
-            if r is not None:
-                res.append(r)
-            else:
-                break
-
-        # join([timeout])：是用来阻塞当前上下文，直至该进程运行结束，一个进程可以被join()多次
-        [w.join() for w in workers]
-
-        gnet.save()
-        import matplotlib.pyplot as plt
-        plt.plot(res)
-        plt.ylabel('Moving average ep reward')
-        plt.xlabel('Step')
-        plt.show()
+        train()
     else:
-        gnet.load()
         test()
