@@ -25,7 +25,7 @@ class LandMars(object):
         self.name = "LandMars"
         self.state_dim = 14
         self.action_dim = 3
-        self.delta_t = 0.002
+        self.delta_t = 0.005
         self.memory = Memory()
 
     def reset(self):
@@ -34,11 +34,11 @@ class LandMars(object):
         self.state = np.array([0.3 * (random.random() - 0.5), 1.0, 0.3 * (random.random() - 0.5), 0.0, 0.0, 0.0, \
                                1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0], dtype=float)
         # 力的单位是N
-        self.params = np.array([math.pi / 18.0, 40, 300, 3], dtype=float)
+        self.params = np.array([math.pi / 18.0, 40, 300, 9.8], dtype=float)
         # 转动惯例
         self.inertia_tensor = np.eye(3, dtype=float)
         # 推力作用点
-        self.thrust_center = np.array([0.0, -0.02, 0.0])
+        self.thrust_center = np.array([0.0, 0.0, 0.0])
         # 更新
         self.buf = np.zeros_like(self.state)
         self.init_distance = np.linalg.norm(self.state[:3])
@@ -56,19 +56,21 @@ class LandMars(object):
         # step dm distance
         reward = -0.5 \
                  - self.buf[13] * self.delta_t \
-                 + math.exp(1 - np.linalg.norm(self.state[:3]) / self.init_distance)  - 1.0 \
+                 + math.exp(1 - np.linalg.norm(xz) / self.init_distance_xz) - 1.0 \
                  - np.linalg.norm(self.state[3:6]) / self.max_landv \
-                 - np.dot(xz, vxz) / (np.linalg.norm(xz) * np.linalg.norm(vxz)) * 2
+                 - np.dot(xz, vxz) / (np.linalg.norm(xz) * np.linalg.norm(vxz)) \
+                 - self.state[1] * self.state[4] / abs(self.state[4]) / abs(self.state[1])
                  #- np.dot(self.state[3:6], self.state[0:3]) * 1.5
         #print(reward, control)
         # 结束条件是，y<0
         # 质量衰减不能太多、不能向上飞，落点不能偏离太多,落地速度不能太大，落地角速度不能太大，落地姿态也不能太大
-        if self.state[1] < 0 or self.state[13] < 1 or self.state[1] > 2:
+        if self.state[1] < 0 or self.state[13] < 1 or self.state[1] > 1.2:
             done = True
             #print(self.state[13],np.linalg.norm(self.state[:3]))
-            reward = 30 * (math.exp(1 - np.linalg.norm(self.state[:3]) / self.init_distance) - 1.0)
+            reward = 5 * (math.exp(1 - np.linalg.norm(xz) / self.init_distance_xz) - 1.0)
+
             if np.linalg.norm(self.state[:3]) > 0.05 * self.init_distance:
-                reward -= 200
+                reward -= 20
         else:
             done = False
         self.memory.push(self.state)

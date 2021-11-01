@@ -45,9 +45,11 @@ class Critic(nn.Module):
 class PPO:
     def __init__(self, state_dim, hiddem_dim, action_dim, batch_size):
         self.batch_size = batch_size
+        self.action_dim = action_dim
+        self.state_dim =state_dim
         self.device = torch.device("cuda:0")  # check gpu
-        self.actor_learningrate =0.00005
-        self.critic_learningrate = 0.00005
+        self.actor_learningrate =0.0001
+        self.critic_learningrate = 0.0001
         self.actor = Actor(state_dim,hiddem_dim,action_dim).to(self.device)
         self.critic = Critic(state_dim,hiddem_dim).to(self.device)
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=self.actor_learningrate)
@@ -60,15 +62,14 @@ class PPO:
         self.memory_dones = []
         # 训练参数
         self.eps = 1e-7
-        self.n_epochs = 80
+        self.n_epochs = 10
         self.gamma = 0.99
         self.policy_clip = 0.2
         self.gae_lambda = 0.95
         self.advantages_norm = False
         self.c1 = 0.5
         # 动作选择参数
-        action_std = 0.5
-        self.action_var = torch.full((action_dim,), action_std * action_std).to(self.device)
+        self.action_std = 0.5
 
     def update_lr(self,lr):
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=lr)
@@ -106,6 +107,8 @@ class PPO:
         # 生成分布
         action_mu = self.actor(state)
         # 计算互相关矩阵
+        self.action_var = torch.full((self.action_dim,), self.action_std * self.action_std).to(self.device)
+
         cov_mat = torch.diag(self.action_var).to(self.device)
 
         dist = MultivariateNormal(action_mu, cov_mat)
@@ -125,6 +128,7 @@ class PPO:
         # 生成分布
         action_mu = self.actor(state)
         # 计算互相关矩阵
+        self.action_var = torch.full((self.action_dim,), self.action_std * self.action_std).to(self.device)
         cov_mat = torch.diag(self.action_var).to(self.device)
 
         dist = MultivariateNormal(action_mu, cov_mat)

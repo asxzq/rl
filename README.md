@@ -4,11 +4,23 @@
 
 训练参数通常在生成rl-agent的文件中。
 
-### 参考：
+PPO_ElegantRL LandMars LandMars_PPO 不可用
+
+### 计划：
+
+学习gym库的env源码，学习reward的规则
+
+继续完善landmars环境
+
+学习elegantRL源码
+
+### 主要参考：
 
 [easy-rl/codes at master · datawhalechina/easy-rl (github.com)](https://github.com/datawhalechina/easy-rl/tree/master/codes)
 
 [MorvanZhou/Reinforcement-learning-with-tensorflow: Simple Reinforcement learning tutorials, 莫烦Python 中文AI教学 (github.com)](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow)
+
+https://github.com/AI4Finance-Foundation/ElegantRL
 
 ### 环境：python3.7.10
 
