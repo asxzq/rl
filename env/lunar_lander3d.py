@@ -273,6 +273,7 @@ class LunarLander(gym.Env, EzPickle):
         # Engines
         tip = (math.sin(self.lander.angle), math.cos(self.lander.angle))
         side = (-tip[1], tip[0])
+        # dispersion 分散情况
         dispersion = [self.np_random.uniform(-1.0, +1.0) / SCALE for _ in range(2)]
 
         m_power = 0.0

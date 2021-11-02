@@ -1,4 +1,4 @@
-from net import AgentPPO
+from agent import AgentPPO
 import torch
 import gym
 import numpy as np
@@ -10,7 +10,7 @@ action_dim = env.action_space.shape[0]
 
 agent = AgentPPO()
 agent.init(512, state_dim, action_dim)
-agent.act.load_state_dict(torch.load("actor.pth"))
+agent.act.load_state_dict(torch.load("AgentPPO_LunarLanderContinuous-v2_1\\actor.pth"))
 
 print("模型加载成功")
 for i in range(30):
