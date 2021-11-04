@@ -23,7 +23,7 @@ class AgentPPO:
 
         self.ratio_clip = 0.2  # ratio.clamp(1 - clip, 1 + clip)
         self.lambda_entropy = 0.02  # could be 0.01~0.05
-        self.lambda_gae_adv = 0.98  # could be 0.95~0.99, GAE (Generalized Advantage Estimation. ICLR.2016.)
+        self.lambda_gae_adv = 0.99  # could be 0.95~0.99, GAE (Generalized Advantage Estimation. ICLR.2016.)
         self.get_reward_sum = None  # self.get_reward_sum_gae if if_use_gae else self.get_reward_sum_raw
         self.trajectory_list = None
 
@@ -46,7 +46,7 @@ class AgentPPO:
         actions, noises = self.act.get_action(states)
         return actions[0].detach().cpu().numpy(), noises[0].detach().cpu().numpy()
 
-    # 与环境交互
+
     def explore_env(self, env, target_step):
         trajectory_temp = list()
 
@@ -55,7 +55,7 @@ class AgentPPO:
         for i in range(target_step):
             action, noise = self.select_action(state)
             next_state, reward, done, _ = env.step(np.tanh(action))
-            trajectory_temp.append((state, reward, done, action, noise))  # 记录
+            trajectory_temp.append((state, reward, done, action, noise))  
             if done:
                 state = env.reset()
                 last_done = i
@@ -64,13 +64,13 @@ class AgentPPO:
         self.state = state
 
         '''splice list'''
-        # 与上一次explore_env不完整episode的数据拼接,保证返回列表内为完整的episode数据
+       
         trajectory_list = self.trajectory_list + trajectory_temp[:last_done + 1]
-        # 保留不完整episode的数据
+        
         self.trajectory_list = trajectory_temp[last_done:]
         return trajectory_list
 
-    # 训练
+
     def update_net(self, buffer, batch_size, repeat_times, soft_update_tau):
         with torch.no_grad():
             buf_len = buffer[0].shape[0]
@@ -79,26 +79,25 @@ class AgentPPO:
 
             '''get buf_r_sum, buf_logprob'''
             bs = 2 ** 8  # set a smaller 'BatchSize' when out of GPU memory.
-            # 分批输入critic_target(old)
+            
             buf_value = [self.cri_target(buf_state[i:i + bs]) for i in range(0, buf_len, bs)]
-            # 拼接
+            
             buf_value = torch.cat(buf_value, dim=0)
 
             buf_logprob = self.act.get_old_logprob(buf_action, buf_noise)
             # buf_advantage = buf_r_sum - buf_value(from critic_target.net)
             buf_r_sum, buf_advantage = self.get_reward_sum(buf_len, buf_reward, buf_mask, buf_value)  # detach()
-            # 归一化buf_advantage
+            
             buf_advantage = (buf_advantage - buf_advantage.mean()) / (buf_advantage.std() + 1e-5)
             del buf_noise, buffer[:]
 
         '''PPO: Surrogate objective of Trust Region'''
         obj_critic = obj_actor = None
-        # 平均每条数据取到repeat_times次
-        # 此处buf_len 一定要大于 batch_size
+        
         if int(buf_len / batch_size * repeat_times) == 0:
             print(buf_len, batch_size)
         for _ in range(int(buf_len / batch_size * repeat_times)):
-            # 随机采样
+            
             indices = torch.randint(buf_len, size=(batch_size,), requires_grad=False, device=self.device)
 
             state = buf_state[indices]
@@ -108,7 +107,7 @@ class AgentPPO:
             advantage = buf_advantage[indices]
 
             # actor loss
-            # 获得新分布的log(p) 和 熵
+           
             new_logprob, obj_entropy = self.act.get_logprob_entropy(state, action)  # it is obj_actor
             ratio = (new_logprob - logprob.detach()).exp()
             surrogate1 = advantage * ratio
@@ -126,20 +125,19 @@ class AgentPPO:
         a_std_log = getattr(self.act, 'a_std_log', torch.zeros(1))
         return obj_critic.item(), obj_actor.item(), a_std_log.mean().item()  # logging_tuple
 
-    # 原始的 reward_sum 方法
+    
     def get_reward_sum_raw(self, buf_len, buf_reward, buf_mask, buf_value) -> (torch.Tensor, torch.Tensor):
         buf_r_sum = torch.empty(buf_len, dtype=torch.float32, device=self.device)  # reward sum
 
         pre_r_sum = 0
         for i in range(buf_len - 1, -1, -1):
             # if done: buf_mask[i] = 0 else buf_mask[i] = gamma
-            # 保证同一个episode的数据进行累加
+            
             buf_r_sum[i] = buf_reward[i] + buf_mask[i] * pre_r_sum
             pre_r_sum = buf_r_sum[i]
         buf_advantage = buf_r_sum - (buf_mask * buf_value[:, 0])
         return buf_r_sum, buf_advantage
 
-    # 加入gae 的reward_sum 方法///// 此处感觉有点问题
     def get_reward_sum_gae(self, buf_len, ten_reward, ten_mask, ten_value) -> (torch.Tensor, torch.Tensor):
         buf_r_sum = torch.empty(buf_len, dtype=torch.float32, device=self.device)  # old policy value
         buf_advantage = torch.empty(buf_len, dtype=torch.float32, device=self.device)  # advantage value
