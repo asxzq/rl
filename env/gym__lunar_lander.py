@@ -511,7 +511,8 @@ def demo_heuristic_lander(env, seed=None, render=False):
     steps = 0
     s = env.reset()
     while True:
-        a = heuristic(env, s)
+        #a = heuristic(env, s)
+        a = np.array([0.0, 0.0], dtype=float)
         s, r, done, info = env.step(a)
         total_reward += r
 
@@ -532,4 +533,4 @@ def demo_heuristic_lander(env, seed=None, render=False):
 
 
 if __name__ == "__main__":
-    demo_heuristic_lander(LunarLander(), render=True)
+    demo_heuristic_lander(LunarLanderContinuous(), render=True)
