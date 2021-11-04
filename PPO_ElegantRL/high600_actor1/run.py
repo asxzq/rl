@@ -1,4 +1,4 @@
-'''run.py'''
+
 import torch
 import os
 import numpy as np
@@ -6,8 +6,6 @@ from copy import deepcopy
 import time
 import gym
 gym.logger.set_level(40)  # Block warning
-
-# 注释进度
 
 # PreprocessEnv
 # get_gym_env_info
@@ -20,7 +18,7 @@ class Arguments:
 
         self.cwd = None  # current work directory. None means set automatically
         self.if_remove = True  # remove the cwd folder? (True, False, None:ask me)
-        self.break_step = 2 ** 24  # break training after 'total_step > break_step'
+        self.break_step = 2 ** 25  # break training after 'total_step > break_step'
         self.if_allow_break = True  # allow break training when reach goal (early termination)
 
         self.visible_gpu = '0'  # for example: os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2,'
@@ -65,6 +63,7 @@ class Arguments:
         torch.set_default_dtype(torch.float32)
 
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self.visible_gpu)
+        
 
 
 def train_and_evaluate(args, agent_id=0):
@@ -73,18 +72,18 @@ def train_and_evaluate(args, agent_id=0):
     '''init: Agent'''
     env = args.env
     agent = args.agent
-    # 初始化agent，根据env信息创建网络和优化器
+
     agent.init(args.net_dim, env.state_dim, env.action_dim,
                args.learning_rate, args.if_per_or_gae)
 
     '''init Evaluator'''
-    # 深度复制
+
     eval_env = deepcopy(env)
-    # 评估
+
     evaluator = Evaluator(args.cwd, agent_id, agent.device, eval_env, args.eval_times, args.eval_gap)
 
     '''init ReplayBuffer'''
-    # 回放缓冲
+
     buffer = list()
 
     def update_buffer(_trajectory):
@@ -111,7 +110,7 @@ def train_and_evaluate(args, agent_id=0):
     repeat_times = args.repeat_times
     if_allow_break = args.if_allow_break
     soft_update_tau = args.soft_update_tau
-    # 删除args
+
     del args
 
     agent.state = env.reset()
@@ -119,16 +118,16 @@ def train_and_evaluate(args, agent_id=0):
     if_train = True
     while if_train:
         with torch.no_grad():
-            # 收集数据
+
             trajectory_list = agent.explore_env(env, target_step)
             steps, r_exp = update_buffer(trajectory_list)
-        # 记录单元
+
         logging_tuple = agent.update_net(buffer, batch_size, repeat_times, soft_update_tau)
 
         with torch.no_grad():
-            # 评估和保存训练网络
+           
             if_reach_goal = evaluator.evaluate_and_save(agent.act, steps, r_exp, logging_tuple)
-            # 如果达到训练目标就停止
+            
             if_train = not ((if_allow_break and if_reach_goal)
                             or evaluator.total_step > break_step
                             or os.path.exists(f'{cwd}/stop'))
@@ -172,7 +171,7 @@ class Evaluator:
 
         if r_avg > self.r_max:  # save checkpoint with highest episode return
             self.r_max = r_avg  # update max reward (episode return)
-            # 保存actor网络参数
+           
             act_save_path = f'{self.cwd}/actor.pth'
             torch.save(act.state_dict(), act_save_path)  # save policy network in *.pth
             print(f"{self.agent_id:<3}{self.total_step:8.2e}{self.r_max:8.2f} |")  # save policy and print
@@ -194,7 +193,7 @@ class Evaluator:
               f"{r_exp:8.2f}{''.join(f'{n:7.2f}' for n in log_tuple)}")
         return if_reach_goal
 
-    # 静态方法 不实例也能调用
+    
     @staticmethod
     def get_r_avg_std_s_avg_std(rewards_steps_list):
         rewards_steps_ary = np.array(rewards_steps_list, dtype=np.float32)
@@ -224,7 +223,6 @@ def get_episode_return_and_step(env, act, device) -> (float, int):
     return episode_return, episode_step
 
 
-# 重写环境，加入必要的数据类型转换和信息
 class PreprocessEnv(gym.Wrapper):  # environment wrapper
     def __init__(self, env, if_print=True):
         self.env = gym.make(env) if isinstance(env, str) else env
@@ -241,8 +239,7 @@ class PreprocessEnv(gym.Wrapper):  # environment wrapper
         state, reward, done, info_dict = self.env.step(action * self.action_max)
         return state.astype(np.float32), reward, done, info_dict
 
-# 获取环境信息
-# 名称，状态维度，动作维度，最大动作区间，最大步数，是否离散，目标回报
+
 def get_gym_env_info(env, if_print) -> (str, int, int, int, int, bool, float):
     assert isinstance(env, gym.Env)
 

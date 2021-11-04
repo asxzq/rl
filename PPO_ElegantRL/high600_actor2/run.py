@@ -20,7 +20,7 @@ class Arguments:
 
         self.cwd = None  # current work directory. None means set automatically
         self.if_remove = True  # remove the cwd folder? (True, False, None:ask me)
-        self.break_step = 2 ** 24  # break training after 'total_step > break_step'
+        self.break_step = 2 ** 25  # break training after 'total_step > break_step'
         self.if_allow_break = True  # allow break training when reach goal (early termination)
 
         self.visible_gpu = '0'  # for example: os.environ['CUDA_VISIBLE_DEVICES'] = '0, 2,'
@@ -126,9 +126,9 @@ def train_and_evaluate(args, agent_id=0):
         logging_tuple = agent.update_net(buffer, batch_size, repeat_times, soft_update_tau)
 
         with torch.no_grad():
-            # 评估和保存训练网络
+            # 评估和保存训练网�?
             if_reach_goal = evaluator.evaluate_and_save(agent.act, steps, r_exp, logging_tuple)
-            # 如果达到训练目标就停止
+            # 如果达到训练目标就停�?
             if_train = not ((if_allow_break and if_reach_goal)
                             or evaluator.total_step > break_step
                             or os.path.exists(f'{cwd}/stop'))
@@ -194,7 +194,7 @@ class Evaluator:
               f"{r_exp:8.2f}{''.join(f'{n:7.2f}' for n in log_tuple)}")
         return if_reach_goal
 
-    # 静态方法 不实例也能调用
+    # 静态方�?不实例也能调�?
     @staticmethod
     def get_r_avg_std_s_avg_std(rewards_steps_list):
         rewards_steps_ary = np.array(rewards_steps_list, dtype=np.float32)
@@ -224,7 +224,7 @@ def get_episode_return_and_step(env, act, device) -> (float, int):
     return episode_return, episode_step
 
 
-# 重写环境，加入必要的数据类型转换和信息
+# 重写环境，加入必要的数据类型转换和信�?
 class PreprocessEnv(gym.Wrapper):  # environment wrapper
     def __init__(self, env, if_print=True):
         self.env = gym.make(env) if isinstance(env, str) else env
@@ -242,7 +242,7 @@ class PreprocessEnv(gym.Wrapper):  # environment wrapper
         return state.astype(np.float32), reward, done, info_dict
 
 # 获取环境信息
-# 名称，状态维度，动作维度，最大动作区间，最大步数，是否离散，目标回报
+# 名称，状态维度，动作维度，最大动作区间，最大步数，是否离散，目标回�?
 def get_gym_env_info(env, if_print) -> (str, int, int, int, int, bool, float):
     assert isinstance(env, gym.Env)
 

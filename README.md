@@ -4,7 +4,7 @@
 
 训练参数通常在生成rl-agent的文件中。
 
-PPO_ElegantRL LandMars LandMars_PPO 不可用
+PPO_ElegantRL LandMars LandMars_PPO A2C不可用
 
 ### 计划：
 
@@ -21,6 +21,8 @@ PPO_ElegantRL LandMars LandMars_PPO 不可用
 [MorvanZhou/Reinforcement-learning-with-tensorflow: Simple Reinforcement learning tutorials, 莫烦Python 中文AI教学 (github.com)](https://github.com/MorvanZhou/Reinforcement-learning-with-tensorflow)
 
 https://github.com/AI4Finance-Foundation/ElegantRL
+
+https://github.com/openai/gym/tree/master/gym/envs
 
 ### 环境：python3.7.10
 

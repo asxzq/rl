@@ -535,7 +535,7 @@ def demo_continuous_action():
     args = Arguments()  # hyper-parameters of on-policy is different from off-policy
     args.agent = AgentPPO()
     args.agent.cri_target = True
-    args.visible_gpu = '0'
+    args.visible_gpu = '1'
 
     if_train_pendulum = 0
     if if_train_pendulum:
