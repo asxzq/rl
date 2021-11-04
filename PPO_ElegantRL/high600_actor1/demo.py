@@ -22,13 +22,12 @@ def demo_continuous_action():
         args.batch_size = args.net_dim * 2
         args.target_step = args.env.max_step * 8
 
-    if_train_lunar_lander = 1
+    if_train_lunar_lander = 0
     if if_train_lunar_lander:
         "TotalStep: 4e5, TargetReward: 200, UsedTime: 900s"
         args.env = PreprocessEnv(env=gym.make('LunarLanderContinuous-v2'))
         args.target_step = args.env.max_step * 4
         args.if_per_or_gae = True
-
         print(args.target_step)
         args.gamma = 0.98
 
@@ -39,7 +38,7 @@ def demo_continuous_action():
         args.gamma = 0.98
         args.if_per_or_gae = True
 
-    if_train_lunar_lander3D = 0
+    if_train_lunar_lander3D = 1
     if if_train_lunar_lander3D:
         "TotalStep: 4e5, TargetReward: 200, UsedTime: 900s"
         args.env = LandMars()
