@@ -35,7 +35,7 @@ def train():
             r = r1 + r2
             if done:
                 reward = 0.0
-            agent.memory(s,r,a)
+            agent.memory(s, r, a)
 
             s = s_ # 更新环境
             ep_r += r
@@ -70,13 +70,13 @@ def eval():
             s = s_  # 更新环境
             ep_r += r
             step += 1
-            if abs(x)>env.x_threshold or abs(theta)> env.theta_threshold_radians:
+            if abs(x) > env.x_threshold or abs(theta) > env.theta_threshold_radians:
                 print('Episode:', i, ' Reward:', ep_r, ' step', step)
                 break
 
 
 if __name__=="__main__":
-    env,agent = make_env()
+    env, agent = make_env()
     if ONTRAIN:
         train()
     else:
