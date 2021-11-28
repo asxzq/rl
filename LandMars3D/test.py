@@ -35,5 +35,5 @@ for i in range(30):
         if done:
             print('Episode:', i, ' Reward:', ep_r, env.state[0:6],' step', step)
             break
-    env.render()
+    env.render_()
 # env.close()

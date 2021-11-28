@@ -10,16 +10,26 @@ import random
 class Memory:
     def __init__(self):
         self.memory = []
+        self.theta = []
 
-    def push(self, state):
+    def push(self, state, theta):
         self.memory.append(np.copy(state))
+        self.theta.append(np.copy(theta))
 
     def getxyz(self):
         m = np.array(self.memory, dtype=float)
         return m[:, 0], m[:, 1], m[:, 2]
 
+    def getvxyz(self):
+        m = np.array(self.memory, dtype=float)
+        return m[:, 3], m[:, 4], m[:, 5]
+
+    def gettheta(self):
+        return np.array(self.theta, dtype=float)
+
     def clear(self):
         self.memory = []
+        self.theta = []
 
 def EulerAndQuaternionTransform(intput_data):
 
@@ -79,7 +89,7 @@ class LandMars(object):
         self.state_dim = 14
         self.action_dim = 3
         self.delta_t = 0.1
-        self.delta_t = 0.02
+        self.delta_t = 0.1
         self.memory = Memory()
         self.max_step = 300
         self.max_step = 1000
@@ -200,7 +210,7 @@ class LandMars(object):
 
         # update total_reward
         self.total_reward += reward
-        self.memory.push(self.state)
+        self.memory.push(self.state, theta)
 
         return state_out.astype(np.float32), reward, done, {}
 
@@ -214,6 +224,48 @@ class LandMars(object):
         ax1.scatter3D(50, 50, 500, cmap='Greys')
         ax1.scatter3D(-50, -50, 0.0, cmap='Greys')
         plt.show()
+
+
+
+    def render_(self):
+
+        import matplotlib.animation as animation
+        import time
+
+        x, y, z = self.memory.getxyz()
+        vx, vy, vz = self.memory.getvxyz()
+        theta = self.memory.gettheta()
+        plt.ion();  # 开启interactive mode 成功的关键函数
+        azim = 90 - math.atan(- x[0] / z[0]) / math.pi * 180
+        elev = 30
+
+        for i in range(len(x)):
+            plt.clf()  # 清除之前画的图
+
+            title = "x:%3f  " % z[i] + "y:%3f  " % x[i] + "z:%3f" % y[i] + "\n" + \
+                "vx:%3f  " % vz[i] + "vy:%3f  " % vx[i] + "z:%3f" % vy[i] + "\n" + \
+                "attitude:%3f rad" % theta[i] + "time:%1f s" % (i * self.delta_t)
+            # print(title)
+            fig = plt.gcf()  # 获取当前图
+            ax = fig.gca(projection='3d')  # 获取当前轴
+            ax.view_init(elev, azim)  # 设定角度
+            ax.scatter3D(z[:i], x[:i], y[:i], cmap='blue')
+            ax.scatter3D(0.0, 0.0, 0.0, cmap='Reds')
+            ax.scatter3D(50, 50, 500, cmap='Greys')
+            ax.scatter3D(-50, -50, 0.0, cmap='Greys')
+            plt.title("%s" % title)
+            if i==0 :
+                plt.pause(10)
+            plt.pause(0.01)  # 暂停一段时间，不然画的太快会卡住显示不出来
+
+            elev, azim = ax.elev, ax.azim  # 将当前绘制的三维图角度记录下来，用于下一次绘制（放在ioff()函数前后都可以，但放在其他地方就不行）
+
+            plt.ioff()  # 关闭画图窗口Z
+
+        # 加这个的目的是绘制完后不让窗口关闭
+        plt.show()
+
+
 
     def save_points(self):
 
