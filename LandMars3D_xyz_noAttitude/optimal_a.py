@@ -3,9 +3,36 @@ import numpy as np
 from scipy.integrate import odeint
 import sympy as sym
 import sys
-from Problem import Landing_Earth_NoMass_NoThrustMagnitudeConstraint
+# sys.path.append("c:/Users/Lynn/PycharmProjects/20210310_Landing_Problem_Rearrange/2_Energy_Optimal/1_Problem")
+# from Problem import Landing_Earth_NoMass_NoThrustMagnitudeConstraint
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
+
+class Landing_Earth_NoMass_NoThrustMagnitudeConstraint:
+    def __init__(self):
+        self.g = np.array([0, 9.8, 0], dtype=float)
+        self.state0 = self.reset_state()
+        self.rf = np.array([0, 0, 0], dtype=float)
+        self.vf = np.array([0, 0, 0], dtype=float)
+
+    def reset_state(self):
+        return np.array([np.random.uniform(-30, 30), np.random.uniform(400, 500), np.random.uniform(-30, 30),
+                               0.0, 0.0, 0.0,])
+
+
+    def fun_dynamics(self, state, t, u):
+
+
+        state_out = np.array([0, 0, 0, 0, 0, 0], dtype=float)
+        state_out[0] = state[3]
+        state_out[1] = state[4]
+        state_out[2] = state[5]
+        state_out[3] = u[0]
+        state_out[4] = u[1]
+        state_out[5] = u[2]
+        dydt = [state[3], state[4], state[5], u[0], u[1], u[2]]
+        return dydt
 
 class Simulation(object):
 
@@ -13,6 +40,7 @@ class Simulation(object):
 
         self.pro = Landing_Earth_NoMass_NoThrustMagnitudeConstraint()
         self.tf = self.fun_optimaltime_determination()
+        print(self.tf)
         self.fun_get_episode()
 
     def fun_optimaltime_determination(self):
@@ -24,7 +52,7 @@ class Simulation(object):
         g = self.pro.g
 
         tf = sym.symbols('tf')
-        H_tf = np.linalg.norm(g) **2 /2 * tf **4 - 2 * np.linalg.norm(v0)**2 * tf**2 - 12 * np.dot(v0, r0) *tf - 18 * np.linalg.norm(r0)**2
+        H_tf = np.linalg.norm(g) ** 2 / 2 * tf ** 4 - 2 * np.linalg.norm(v0)**2 * tf**2 - 12 * np.dot(v0, r0) *tf - 18 * np.linalg.norm(r0)**2
         t_optimal = sym.solve(H_tf, tf)
         print(t_optimal)
 
@@ -38,8 +66,9 @@ class Simulation(object):
         t_tra = np.linspace(0, self.tf, 1000)
         state_tra = odeint(self.fun_ODE, self.state0, t_tra, args=())
         control_tra = np.array([self.fun_controller1(self.state0, t) for t in t_tra])
-
-
+        #
+        #for i in range(len(t_tra)):
+            #print(state_tra[i])
         plt.figure(1)
         ax1 = plt.axes(projection='3d')
         ax1.plot3D(state_tra[:, 0], state_tra[:, 1], state_tra[:, 2], 'blue', label='r')  # 绘制空间曲线
@@ -92,7 +121,7 @@ class Simulation(object):
 
     def fun_ODE(self, state, t):
         # 动力学方程
-        u = self.fun_controller1(state, t)
+        u = self.fun_controller2(state, t)
         # u2 = self.fun_controller2(state, t)
         # print(u, u2)
         state_dot = self.pro.fun_dynamics(state, t, u)

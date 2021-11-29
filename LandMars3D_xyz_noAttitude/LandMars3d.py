@@ -1,8 +1,10 @@
 import numpy as np
 import math
 from numba_funcs import landing3d_diff
+from scipy.integrate import odeint
 import matplotlib.pyplot as plt
-
+import sympy as sym
+import optimal_a
 from scipy.spatial.transform import Rotation as R
 
 import random
@@ -105,9 +107,7 @@ class LandMars(object):
         self.thrust_min = 0.3
 
     def reset(self):
-        # 当地坐标系：x北极，y轴竖直向上，z轴东
-        # 本体系：y纵轴向上，z轴在竖直平面内垂直x轴向�?
-        # 默认初始状态本体系和当地坐标系重合
+
         self.state = np.array([np.random.uniform(-30, 30), np.random.uniform(400, 500), np.random.uniform(-30, 30),
                                0.0, -2.0, 0.0,
                                1.0, 0.0, 0.0, 0.0,
@@ -117,14 +117,14 @@ class LandMars(object):
         self.state_init = np.copy(self.state)
 
         self.memory.clear()
-        # 力的单位是N
+
         self.params = np.array([math.pi / 36.0, 120000.0, 600, 9.8], dtype=float)
-        # 转动惯量
+
         self.inertia_tensor = np.diag(np.array([10000.0, 3000.0, 10000.0], dtype=float))
 
-        # 推力作用�?
-        self.thrust_center = np.array([0.0, -0.5, 0.0], dtype=float)
-        # 更新
+
+        self.thrust_center = np.array([0.0, 0.0, 0.0], dtype=float)
+
         self.buf = np.zeros_like(self.state)
 
 
@@ -187,7 +187,7 @@ class LandMars(object):
         (x, y, z, vx, vy, vz) = state_out[:6]
         cal_coefficient = np.array([1, 1, 1, 1, 1, 1, 1])
         value_array = np.array([
-            x, y, z, vx, vy, vz, theta
+            x, y, z, vx, vy, vz, 0.0
         ]) * cal_coefficient
         # calculate value--reward
         value = 80 * math.exp(-np.linalg.norm(value_array))
@@ -215,34 +215,112 @@ class LandMars(object):
 
         # update total_reward
         self.total_reward += reward
+
+        # memory
         self.memory.push(self.state, theta)
         self.buf[4] += self.params[3]
         self.memory.memory_a.append(np.copy(self.buf))
         self.memory.control.append(control)
+
+        # if done cal->optimal
+        if done:
+            self.tf = self.fun_optimaltime_determination()
+            # print(self.tf)
+            self.fun_get_episode()
+            len_ = len(self.memory.memory_a) - 1
+            self.tf_rl = len_ * self.delta_t
+
         return state_out.astype(np.float32), reward, done, {}
 
+    def fun_optimaltime_determination(self):
+
+        # 确定最优的转移时间 t_optimal
+        state0 = self.state_init[:6]
+        r0 = state0[0:3]
+        v0 = state0[3:6]
+        self.g = np.array([0, -self.params[3], 0], dtype=float)
+        g = self.g
+        tf = sym.symbols('tf')
+        H_tf = np.linalg.norm(g) ** 2 / 2 * tf ** 4 - 2 * np.linalg.norm(v0) ** 2 * tf ** 2 - 12 * np.dot(v0, r0) * tf - 18 * np.linalg.norm(r0) ** 2
+        t_optimal = sym.solve(H_tf, tf)
+        return np.float(t_optimal[1])
+
+
+    def fun_get_episode(self):
+
+        self.rf = self.state[:3]
+        self.vf = self.state[3:6]
+        self.state0 = np.copy(self.state_init[:6])
+        # print(self.state0)
+        # print(self.rf, self.vf)
+
+    def fun_ODE(self, state, t):
+        # 动力学方程
+        u = self.fun_controller1(state, t)
+        # u2 = self.fun_controller2(state, t)
+        # print(u, u2)
+        state_dot = self.fun_dynamics(state, t, u)
+
+        return state_dot
+
+    def fun_controller1(self, state, t):
+
+        # 最优控制规律，根据总的飞行时间计算
+        r0 = self.state0[0:3]
+        v0 = self.state0[3:6]
+        rf = self.rf
+        vf = self.vf
+        g = self.g
+
+        u1 = 6 * (self.tf * v0 + self.tf * vf + 2 * r0 - 2 * rf) / self.tf ** 3 * t
+        u2 = 2 * (2 * self.tf * v0 + self.tf * vf + 3 * r0 - 3 * rf) / self.tf ** 2 + g
+
+        u = u1 - u2
+        return u
+
+    def fun_controller2(self, state, t):
+
+        # 最优控制规律，根据总的飞行时间计算
+        r = state[0:3]
+        v = state[3:6]
+        rf = self.rf
+        vf = self.vf
+        g = self.g
+        t_go = (self.tf-t)
+
+        u2 = 2 * (2 * t_go * v + t_go * vf + 3 * r - 3 * rf) / t_go ** 2 + g
+
+        u = - u2
+        return u
+
+    def fun_dynamics(self, state, t, u):
+        # 动力学方程
+        r = state[0:3]
+        v = state[3:6]
+        r_dot = v
+        v_dot = np.copy(u) + self.g
+        state_dot = np.hstack((r_dot, v_dot))
+        return state_dot
+
     def render(self):
-        #import cv2
+        # import cv2
         x, y, z = self.memory.getxyz()
         plt.figure(1)
         ax1 = plt.axes(projection='3d')
-        ax1.plot3D(z, x, y)
+        ax1.scatter3D(z, x, y, cmap='Blues')
         ax1.scatter3D(0.0, 0.0, 0.0, cmap='Reds')
-        #ax1.scatter3D(50, 50, 500, cmap='Greys')
-        #ax1.scatter3D(-50, -50, 0.0, cmap='Greys')
+        ax1.scatter3D(50, 50, 500, cmap='Greys')
+        ax1.scatter3D(-50, -50, 0.0, cmap='Greys')
 
         plt.figure(2)
         len_ = len(self.memory.memory_a) - 1
-        t = np.linspace(0, len_ * self.delta_t, len_ )
+        t = np.linspace(0, len_ * self.delta_t, len_)
         a = np.linalg.norm(np.array(self.memory.memory_a, dtype=float)[1:, 3:6], axis=1)
-        print(t.shape, a.shape)
         plt.plot(t, a, 'b', label='|a|')
         plt.figure(3)
         plt.plot(np.array(self.memory.control, dtype=float)[1:, 0], 'b', label='|a|')
 
         plt.show()
-
-
 
     def render_(self):
 
@@ -281,6 +359,41 @@ class LandMars(object):
 
         # 加这个的目的是绘制完后不让窗口关闭
         plt.show()
+
+    def render_legend(self):
+        t_tra = np.linspace(0, self.tf, 1000)
+        state_tra = odeint(self.fun_ODE, self.state0, t_tra, args=())
+        control_tra = np.array([self.fun_controller1(self.state0, t) for t in t_tra])
+        x, y, z = self.memory.getxyz()
+        len_ = len(self.memory.memory_a) - 1
+
+        plt.figure(1)
+        ax1 = plt.axes(projection='3d')
+        ax1.plot3D(state_tra[:, 2], state_tra[:, 0], state_tra[:, 1], 'red', label='op')  # 绘制空间曲线
+        ax1.plot3D(z, x, y, 'blue', label='rl')
+        plt.legend()
+        ax1.scatter3D(0, 0, 0, cmap='Reds')  # 绘制散点图
+        plt.title('total time_op:' + '%.2f' % self.tf + '\n' + 'total time_rl:' + str(self.delta_t * len_))
+        plt.grid()
+
+
+
+        t = np.linspace(0, self.tf_rl, len_)
+        a = np.linalg.norm(np.array(self.memory.memory_a, dtype=float)[1:, 3:6], axis=1)
+
+        plt.figure(2)
+        plt.plot(t, a, 'blue', label='rl:|u|')
+        plt.plot(t_tra, np.linalg.norm(control_tra, axis=1), 'red', label='op:|u|')
+        plt.legend(loc='best')
+        plt.xlabel('t')
+        plt.ylabel('u')
+        plt.title('total time_op:' + '%.2f' % self.tf + '\n' + 'total time_rl:' + str(self.delta_t * len_))
+        plt.grid()
+
+        plt.show()
+
+
+
 
 
 
