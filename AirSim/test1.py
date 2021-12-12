@@ -18,6 +18,7 @@ def get_UAV_pos(client, vehicle_name="SimpleFlight"):
     return pos
 
 
+# client = airsim.MultirotorClient(ip='172.17.167.208')  # connect to the AirSim simulator
 client = airsim.MultirotorClient()  # connect to the AirSim simulator
 for i in range(9):
     name = "UAV"+str(i+1)
@@ -46,9 +47,11 @@ pos_mig = np.array([[25], [0]])   # 目标位置
 v_cmd = np.zeros([2, 9])
 
 for t in range(500):
+    print(" ")
     for i in range(9):   # 计算每个无人机的速度指令
         name_i = "UAV"+str(i+1)
         pos_i = get_UAV_pos(client, vehicle_name=name_i)
+        print(pos_i)
         r_mig = pos_mig - pos_i
         v_mig = k_mig * r_mig / np.linalg.norm(r_mig)
         v_sep = np.zeros([2, 1])
