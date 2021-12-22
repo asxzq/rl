@@ -96,7 +96,8 @@ class LandMars(object):
         self.state_dim = 14
         self.action_dim = 3
         self.delta_t = 0.1
-        self.delta_t = 0.01
+        self.delta_t = 0.04
+        self.t = 0
         self.memory = Memory()
         self.max_step = 300
         self.max_step = 3000
@@ -112,8 +113,6 @@ class LandMars(object):
                                0.0, -2.0, 0.0,
                                1.0, 0.0, 0.0, 0.0,
                                0.0, 0.0, 0.0, 6100.0], dtype=float)
-
-
         self.state_init = np.copy(self.state)
 
         self.memory.clear()
@@ -122,11 +121,9 @@ class LandMars(object):
 
         self.inertia_tensor = np.diag(np.array([10000.0, 3000.0, 10000.0], dtype=float))
 
-
         self.thrust_center = np.array([0.0, 0.0, 0.0], dtype=float)
 
         self.buf = np.zeros_like(self.state)
-
 
         self.max_landv = 2.0
         self.max_vx = 4
@@ -137,13 +134,13 @@ class LandMars(object):
         self.init_distance_xz = np.linalg.norm(np.array([self.state_init[0], self.state_init[2]], dtype=float))
 
         self.num_step = -1
-        state_out_init, _, _, _ = self.step(action=np.zeros((self.action_dim,), dtype=float))
+        self.t = self.num_step * self.delta_t
+        state_out_init, _, _, _ = self.step(action=np.zeros((self.action_dim,), dtype=float),
+                                            noise=np.zeros((self.action_dim,), dtype=float))
 
         return state_out_init
 
-
-
-    def truestate_outstate(self):
+    def truestate2outstate(self):
         state_ = np.copy(self.state)
         # norm
         state_[0] = self.state[0] / 30
@@ -156,7 +153,7 @@ class LandMars(object):
         state_[13] = self.state[13] / self.state_init[13]
         return state_
 
-    def step(self, action):
+    def step(self, action, noise):
         # action to real control
         control = np.copy(action)
         control[0] = np.clip(action[0], -1, 1) / 2 + 0.5
@@ -165,13 +162,14 @@ class LandMars(object):
         # calculate diff
         landing3d_diff(self.state, control.astype(float), self.params, self.inertia_tensor, self.thrust_center, self.buf)
 
+        self.buf[3:6] += noise
         # update state
         self.state += self.delta_t * self.buf
         self.state[6:10] /= np.linalg.norm(self.state[6:10])
         assert (self.state[6] >= -1) and (self.state[6] <= 1)
 
         # state to state_out
-        state_out = self.truestate_outstate()
+        state_out = self.truestate2outstate()
 
         # calculate state_value
         # calculate theta between [0, 1, 0] and rocket attitude
@@ -195,13 +193,13 @@ class LandMars(object):
 
         # game over or not
         done = False
-        
         if np.abs(theta) > np.pi / 2:
             done = True
             reward = -50
-        
 
         self.num_step += 1
+        self.t = self.num_step * self.delta_t
+
         if self.num_step > self.max_step:
             done = True
             reward = -1 * self.total_reward
@@ -244,7 +242,6 @@ class LandMars(object):
         H_tf = np.linalg.norm(g) ** 2 / 2 * tf ** 4 - 2 * np.linalg.norm(v0) ** 2 * tf ** 2 - 12 * np.dot(v0, r0) * tf - 18 * np.linalg.norm(r0) ** 2
         t_optimal = sym.solve(H_tf, tf)
         return np.float(t_optimal[1])
-
 
     def fun_get_episode(self):
 
@@ -391,11 +388,6 @@ class LandMars(object):
         plt.grid()
 
         plt.show()
-
-
-
-
-
 
     def save_points(self):
 
