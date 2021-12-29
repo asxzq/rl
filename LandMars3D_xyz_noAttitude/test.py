@@ -37,7 +37,7 @@ tf_xz_noise_off = []
 tf_op_noise_on = []
 tf_rl_noise_on = []
 tf_xz_noise_on = []
-'''
+
 for i in range(1000):
     s = env.reset()
     ep_r = 0
@@ -57,50 +57,50 @@ for i in range(1000):
             tf_rl_noise_off.append(env.tf_rl)
             tf_xz_noise_off.append(np.array([env.state[0], env.state[2]], dtype=float))
             break
-    # env.render_legend()
+    env.render()
 # env.close()
 tf_xz_noise_off = np.array(tf_xz_noise_off)
 
-
-plt.figure(1)
-plt.plot(tf_op_noise_off, 'red', label='op')
-plt.plot(tf_rl_noise_off, 'blue', label='rl')
-
-plt.figure(2)
-plt.scatter(tf_xz_noise_off[:, 0], tf_xz_noise_off[:, 1])
-
-'''
-for i in range(1000):
-    s = env.reset()
-    ep_r = 0
-    step = 0
-    while True:
-        action, noise = agent.select_action(s)
-        noise = make_noise(env.t, flag=1)
-        s_, reward, done, info = env.step(action, noise)
-        # 计算r
-        s = s_  # 更新环境
-        ep_r += reward
-        step += 1
-
-        if done:
-            print('Episode:', i, ' Reward:', ep_r, env.state[0:6], ' step', step)
-            print('s', env.state[0], env.state[2])
-            tf_op_noise_on.append(env.tf)
-            tf_rl_noise_on.append(env.tf_rl)
-            tf_xz_noise_on.append(np.array([env.state[0], env.state[2]], dtype=float))
-            break
-    # env.render_legend()
-# env.close()
-
-tf_xz_noise_on = np.array(tf_xz_noise_on)
-
-
-plt.figure(3)
-plt.plot(tf_op_noise_on, 'red', label='op')
-plt.plot(tf_rl_noise_on, 'blue', label='rl')
-
-plt.figure(4)
-plt.scatter(tf_xz_noise_on[:, 0], tf_xz_noise_on[:, 1])
-
-plt.show()
+#
+# plt.figure(1)
+# plt.plot(tf_op_noise_off, 'red', label='op')
+# plt.plot(tf_rl_noise_off, 'blue', label='rl')
+#
+# plt.figure(2)
+# plt.scatter(tf_xz_noise_off[:, 0], tf_xz_noise_off[:, 1])
+#
+#
+# for i in range(1000):
+#     s = env.reset()
+#     ep_r = 0
+#     step = 0
+#     while True:
+#         action, noise = agent.select_action(s)
+#         noise = make_noise(env.t, flag=1)
+#         s_, reward, done, info = env.step(action, noise)
+#         # 计算r
+#         s = s_  # 更新环境
+#         ep_r += reward
+#         step += 1
+#
+#         if done:
+#             print('Episode:', i, ' Reward:', ep_r, env.state[0:6], ' step', step)
+#             print('s', env.state[0], env.state[2])
+#             tf_op_noise_on.append(env.tf)
+#             tf_rl_noise_on.append(env.tf_rl)
+#             tf_xz_noise_on.append(np.array([env.state[0], env.state[2]], dtype=float))
+#             break
+#     # env.render_legend()
+# # env.close()
+#
+# tf_xz_noise_on = np.array(tf_xz_noise_on)
+#
+#
+# plt.figure(3)
+# plt.plot(tf_op_noise_on, 'red', label='op')
+# plt.plot(tf_rl_noise_on, 'blue', label='rl')
+#
+# plt.figure(4)
+# plt.scatter(tf_xz_noise_on[:, 0], tf_xz_noise_on[:, 1])
+#
+# plt.show()

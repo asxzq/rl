@@ -6,9 +6,9 @@ import math, time, base64
 from mapclient import MapClient
 
 # 连接，room_name自己填，不同room_name互不干扰
-room_name = 'my_room_name'
-client = MapClient('http://172.17.135.162:8888/', room_name)
-#client = MapClient('http://127.0.0.1:8888/', room_name)
+room_name = 'default'
+#client = MapClient('http://172.17.135.162:8888/', room_name)
+client = MapClient('http://127.0.0.1:8888/', room_name)
 client.connect()
 
 try:
